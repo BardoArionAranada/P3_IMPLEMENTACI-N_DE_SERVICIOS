@@ -1,47 +1,46 @@
-// services/categoriesService.js
-const { faker } = require('@faker-js/faker');
+// Archivo: services/categoriesService.js
+// Descripción:
+// Servicio de categorías. Ahora utiliza los datos compartidos desde sharedData.js,
+// garantizando sincronización con productos y evitando generar listas independientes.
+//
+// Entidades manejadas:
+//  - id: número identificador
+//  - name: nombre de la categoría
+//  - description: descripción de la categoría
+//  - active: estado (true/false)
+
+const { categories } = require('../sharedData');
 
 class CategoriesService {
   constructor() {
-    // Arreglo de categorías
-    this.categories = [];
-    this.generate();
-  }
-
-  // Generar categorías de ejemplo
-  generate() {
-    for (let i = 0; i < 6; i++) {
-      this.categories.push({
-        id: i + 1,
-        categoryName: faker.commerce.department(),
-        description: faker.commerce.productDescription(),
-        active: faker.datatype.boolean()
-      });
-    }
+    // Usa el arreglo compartido de categorías
+    this.categories = categories;
   }
 
   // Obtener todas las categorías
-  getAll() {
+  async getAll() {
     return this.categories;
   }
 
   // Obtener categoría por ID
-  getById(id) {
+  async getById(id) {
     return this.categories.find(item => item.id === Number(id));
   }
 
-  // Crear categoría nueva
-  create(data) {
+  // Crear nueva categoría
+  async create(data) {
     const newCategory = {
       id: this.categories.length + 1,
-      ...data
+      name: data.name || 'Sin nombre',
+      description: data.description || 'Sin descripción',
+      active: data.active ?? true
     };
     this.categories.push(newCategory);
     return newCategory;
   }
 
-  // Actualizar categoría
-  update(id, changes) {
+  // Actualizar categoría existente
+  async update(id, changes) {
     const index = this.categories.findIndex(item => item.id === Number(id));
     if (index === -1) throw new Error('Categoría no encontrada');
     const category = this.categories[index];
@@ -50,7 +49,7 @@ class CategoriesService {
   }
 
   // Eliminar categoría
-  delete(id) {
+  async delete(id) {
     const index = this.categories.findIndex(item => item.id === Number(id));
     if (index === -1) return null;
     this.categories.splice(index, 1);

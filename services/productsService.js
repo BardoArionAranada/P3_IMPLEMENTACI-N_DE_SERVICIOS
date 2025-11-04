@@ -1,51 +1,57 @@
-// services/productsService.js
-const { faker } = require('@faker-js/faker');
+// Archivo: services/productsService.js
+// Descripción:
+// Servicio de productos. Ahora usa los datos compartidos desde sharedData.js,
+// garantizando sincronización con categorías y marcas.
+// Evita la generación independiente con Faker y mantiene coherencia entre entidades.
+
+// Entidades manejadas:
+//  - id: identificador numérico
+//  - name: nombre del producto
+//  - description: descripción detallada
+//  - price: precio numérico
+//  - stock: unidades disponibles
+//  - image: URL de imagen
+//  - categoryId: relación con categoría
+//  - brandId: relación con marca
+//  - active: estado lógico
+
+const { products } = require('../sharedData');
 
 class ProductsService {
   constructor() {
-    // Arreglo en memoria
-    this.products = [];
-    this.generate(); // Crear datos iniciales
-  }
-
-  // Generar 100 productos falsos
-  generate() {
-    for (let i = 0; i < 100; i++) {
-      this.products.push({
-        id: i + 1,
-        productName: faker.commerce.productName(),
-        description: faker.commerce.productDescription(),
-        price: parseFloat(faker.commerce.price()),
-        stock: faker.number.int({ min: 0, max: 100 }),
-        image: faker.image.url(),
-        categoryId: faker.number.int({ min: 1, max: 6 }),
-        brandId: faker.number.int({ min: 1, max: 100 })
-      });
-    }
+    // Usa el arreglo compartido de productos
+    this.products = products;
   }
 
   // Obtener todos los productos
-  getAll() {
+  async getAll() {
     return this.products;
   }
 
   // Obtener producto por ID
-  getById(id) {
+  async getById(id) {
     return this.products.find(item => item.id === Number(id));
   }
 
   // Crear nuevo producto
-  create(data) {
+  async create(data) {
     const newProduct = {
       id: this.products.length + 1,
-      ...data
+      name: data.name || 'Sin nombre',
+      description: data.description || 'Sin descripción',
+      price: parseFloat(data.price) || 0,
+      stock: data.stock ?? 0,
+      image: data.image || 'https://placehold.co/400x300?text=Producto',
+      categoryId: Number(data.categoryId),
+      brandId: Number(data.brandId),
+      active: data.active ?? true
     };
     this.products.push(newProduct);
     return newProduct;
   }
 
   // Actualizar producto existente
-  update(id, changes) {
+  async update(id, changes) {
     const index = this.products.findIndex(item => item.id === Number(id));
     if (index === -1) throw new Error('Producto no encontrado');
     const product = this.products[index];
@@ -54,7 +60,7 @@ class ProductsService {
   }
 
   // Eliminar producto
-  delete(id) {
+  async delete(id) {
     const index = this.products.findIndex(item => item.id === Number(id));
     if (index === -1) return null;
     this.products.splice(index, 1);

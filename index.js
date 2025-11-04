@@ -1,40 +1,44 @@
-// index.js
-// Punto de entrada del servidor Express.
-
+// importaciones principales
 const express = require('express');
-const routerApi = require('./routes/rutas'); // Importo el agrupador de rutas
+const routerApi = require('./routes/rutas'); // agrupador de rutas
+const setupSwagger = require('./swagger'); // documentación Swagger
+const { logErrors, errorHandler } = require('./middlewares/errorHandler'); // manejo de errores
 
+// instancia
 const app = express();
 const port = 3000;
 
-// Middleware para leer JSON en POST/PUT
+// permite recibir datos en formato JSON
 app.use(express.json());
 
-// Ruta raíz con mensaje HTML 
+// ruta principal
 app.get('/', (req, res) => {
   res.send(`
-    <!DOCTYPE html>
     <html lang="es">
-    <head>
-      <meta charset="UTF-8" />
-      <title>P2 CRUD — Node + Express + Faker</title>
-      <style>
-        body { background-color: #121212; color: #f5f5f5; font-family: Arial, sans-serif; text-align: center; }
-        h1 { color: #00ffcc; margin-top: 20vh; }
-      </style>
-    </head>
-    <body>
-      <h1>P2: Endpoints CRUD</h1>
-      <p>Users | Categories | Brands | Products</p>
-    </body>
+      <head>
+        <meta charset="UTF-8">
+        <title>P3 Implementación de Servicios</title>
+      </head>
+      <body style="background:#121212;color:#00ffcc;text-align:center;font-family:Arial,sans-serif;">
+        <h1>API – Users | Categories | Brands | Products</h1>
+        <p>Práctica 3: Implementación de Servicios con Swagger</p>
+      </body>
     </html>
   `);
 });
 
-// Montaje de todos los routers
+// agrupamos todas las rutas (sin prefijo)
 routerApi(app);
 
-// Arranque del servidor
+// documentación Swagger
+setupSwagger(app);
+
+// middlewares de error
+app.use(logErrors);
+app.use(errorHandler);
+
+// servidor
 app.listen(port, () => {
-  console.log(`Server corriendo en http://localhost:${port}`);
+  console.log(` Servidor corriendo en http://localhost:${port}`);
+  console.log(` Documentación Swagger en http://localhost:${port}/api-docs`);
 });

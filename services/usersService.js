@@ -1,61 +1,64 @@
-// services/usersService.js
-const { faker } = require('@faker-js/faker');
+// Archivo: services/usersService.js
+// Descripción:
+// Servicio de usuarios. Ahora usa los datos compartidos desde sharedData.js,
+// evitando duplicación y manteniendo sincronía con el resto de los módulos.
+
+// Entidades manejadas:
+//  - id: identificador único del usuario
+//  - name: nombre completo
+//  - username: nombre de usuario
+//  - email: correo electrónico
+//  - avatar: imagen del usuario
+//  - password: contraseña (simulada con Faker)
+
+const { users } = require('../sharedData');
 
 class UsersService {
   constructor() {
-    // Datos en memoria
-    this.users = [];
-    this.generate();
-  }
-
-  // Generar 100 usuarios falsos
-  generate() {
-    for (let i = 0; i < 100; i++) {
-      this.users.push({
-        id: i + 1,
-        name: faker.person.fullName(),// nombre completo
-        username: faker.internet.username().toLowerCase(), // nombre de usuario en minúsculas
-        email: faker.internet.email().toLowerCase(), // correo electrónico en minúsculas
-        avatar: faker.image.avatar(), // URL de avatar
-        password: faker.internet.password({ length: 10 })
-      });
-    }
+    // Usa el arreglo compartido de usuarios (ya generado en sharedData.js)
+    this.users = users;
   }
 
   // Obtener todos los usuarios
-  getAll() {
+  async getAll() {
     return this.users;
   }
 
   // Obtener usuario por ID
-  getById(id) {
+  async getById(id) {
     return this.users.find(item => item.id === Number(id));
   }
 
-  // Crear usuario nuevo
-  create(data) {
+  // Crear nuevo usuario
+  async create(data) {
     const newUser = {
-      id: this.users.length + 1,// nuevo ID secuencial
-      ...data // spread operator para copiar las propiedades de data
+      id: this.users.length + 1,
+      name: data.name || 'Sin nombre',
+      username: data.username || data.name?.toLowerCase().replace(/\s+/g, '') || 'user',
+      email: data.email || `${data.name?.toLowerCase().replace(/\s+/g, '')}@example.com`,
+      avatar: data.avatar || 'https://placehold.co/200x200?text=Avatar',
+      password: data.password || '123456'
     };
     this.users.push(newUser);
     return newUser;
   }
 
-  // Actualizar usuario
-  update(id, changes) {
+  // Actualizar usuario existente
+  async update(id, changes) {
     const index = this.users.findIndex(item => item.id === Number(id));
     if (index === -1) throw new Error('Usuario no encontrado');
     const user = this.users[index];
-    this.users[index] = { ...user, ...changes };//merge es {...user, ...changes y sirve para actualizar solo las propiedades que vienen en changes}
+    this.users[index] = { ...user, ...changes };
+    return this.users[index];
   }
 
   // Eliminar usuario
-  delete(id) {
+  async delete(id) {
     const index = this.users.findIndex(item => item.id === Number(id));
     if (index === -1) return null;
+    const deletedUser = this.users[index];
     this.users.splice(index, 1);
-    return { id: Number(id) };
+    return { message: `Usuario con ID ${deletedUser.id} eliminado correctamente` };
   }
 }
 
