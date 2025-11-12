@@ -1,64 +1,88 @@
 // Archivo: services/usersService.js
 // Descripción:
-// Servicio de usuarios. Ahora usa los datos compartidos desde sharedData.js,
-// evitando duplicación y manteniendo sincronía con el resto de los módulos.
-
+// Servicio de usuarios. Actualizado para usar base de datos MongoDB Atlas mediante el modelo User.
+// Las operaciones CRUD se realizan directamente sobre la colección "users" con IDs numéricos.
+//
 // Entidades manejadas:
-//  - id: identificador único del usuario
+//  - _id: identificador único del usuario (Number)
 //  - name: nombre completo
 //  - username: nombre de usuario
 //  - email: correo electrónico
 //  - avatar: imagen del usuario
-//  - password: contraseña (simulada con Faker)
+//  - password: contraseña (texto plano simulado)
 
-const { users } = require('../sharedData');
+const User = require('../models/User');
 
 class UsersService {
   constructor() {
-    // Usa el arreglo compartido de usuarios (ya generado en sharedData.js)
-    this.users = users;
+    // Conexión gestionada desde db.js (MongoDB Atlas)
   }
 
   // Obtener todos los usuarios
   async getAll() {
-    return this.users;
+    try {
+      const users = await User.find();
+      return users;
+    } catch (error) {
+      throw new Error('Error al obtener los usuarios: ' + error.message);
+    }
   }
 
   // Obtener usuario por ID
   async getById(id) {
-    return this.users.find(item => item.id === Number(id));
+    try {
+      const user = await User.findOne({ _id: Number(id) });
+      if (!user) throw new Error(`No se encontró el usuario con ID ${id}`);
+      return user;
+    } catch (error) {
+      throw new Error('Error al buscar el usuario: ' + error.message);
+    }
   }
 
   // Crear nuevo usuario
   async create(data) {
-    const newUser = {
-      id: this.users.length + 1,
-      name: data.name || 'Sin nombre',
-      username: data.username || data.name?.toLowerCase().replace(/\s+/g, '') || 'user',
-      email: data.email || `${data.name?.toLowerCase().replace(/\s+/g, '')}@example.com`,
-      avatar: data.avatar || 'https://placehold.co/200x200?text=Avatar',
-      password: data.password || '123456'
-    };
-    this.users.push(newUser);
-    return newUser;
+    try {
+      const newUser = new User({
+        _id: Number(data._id),
+        name: data.name || 'Sin nombre',
+        username: data.username || data.name?.toLowerCase().replace(/\s+/g, '') || 'user',
+        email: data.email || `${data.name?.toLowerCase().replace(/\s+/g, '')}@example.com`,
+        avatar: data.avatar || 'https://placehold.co/200x200?text=Avatar',
+        password: data.password || '123456'
+      });
+
+      const savedUser = await newUser.save();
+      return savedUser;
+    } catch (error) {
+      console.error('❌ Error al crear el usuario:', error.message);
+      throw new Error('Error al crear el usuario: ' + error.message);
+    }
   }
 
   // Actualizar usuario existente
   async update(id, changes) {
-    const index = this.users.findIndex(item => item.id === Number(id));
-    if (index === -1) throw new Error('Usuario no encontrado');
-    const user = this.users[index];
-    this.users[index] = { ...user, ...changes };
-    return this.users[index];
+    try {
+      const updatedUser = await User.findOneAndUpdate(
+        { _id: Number(id) },
+        { $set: changes },
+        { new: true }
+      );
+      if (!updatedUser) throw new Error(`No se encontró el usuario con ID ${id}`);
+      return updatedUser;
+    } catch (error) {
+      throw new Error('Error al actualizar el usuario: ' + error.message);
+    }
   }
 
   // Eliminar usuario
   async delete(id) {
-    const index = this.users.findIndex(item => item.id === Number(id));
-    if (index === -1) return null;
-    const deletedUser = this.users[index];
-    this.users.splice(index, 1);
-    return { message: `Usuario con ID ${deletedUser.id} eliminado correctamente` };
+    try {
+      const deletedUser = await User.findOneAndDelete({ _id: Number(id) });
+      if (!deletedUser) throw new Error(`No se encontró el usuario con ID ${id}`);
+      return { message: `Usuario con ID ${id} eliminado correctamente` };
+    } catch (error) {
+      throw new Error('Error al eliminar el usuario: ' + error.message);
+    }
   }
 }
 

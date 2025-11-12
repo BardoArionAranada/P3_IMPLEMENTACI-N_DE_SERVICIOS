@@ -1,55 +1,85 @@
 // Archivo: services/brandsService.js
 // Descripción:
-// Servicio de marcas. Ahora utiliza los datos compartidos desde sharedData.js,
-// evitando la creación de arreglos independientes con Faker.
-// Esto garantiza que las marcas estén sincronizadas con productos y otras entidades.
+// Servicio de marcas. Actualizado para usar base de datos MongoDB Atlas mediante el modelo Brand.
+// Las operaciones CRUD se realizan directamente en la colección "brands" con IDs numéricos.
+//
+// Entidades manejadas:
+//  - _id: identificador único (Number)
+//  - name: nombre de la marca
+//  - country: país de origen
+//  - description: descripción de la marca
+//  - active: estado lógico (true/false)
 
-const { brands } = require('../sharedData');
+const Brand = require('../models/Brand');
 
 class BrandsService {
   constructor() {
-    // En lugar de generar marcas nuevas, usa el arreglo compartido
-    this.brands = brands;
+    // Conexión a la colección "brands" gestionada desde MongoDB Atlas
   }
 
   // Obtener todas las marcas
   async getAll() {
-    return this.brands;
+    try {
+      const brands = await Brand.find();
+      return brands;
+    } catch (error) {
+      throw new Error('Error al obtener las marcas: ' + error.message);
+    }
   }
 
   // Obtener marca por ID
   async getById(id) {
-    return this.brands.find(item => item.id === Number(id));
+    try {
+      const brand = await Brand.findOne({ _id: Number(id) });
+      if (!brand) throw new Error(`No se encontró la marca con ID ${id}`);
+      return brand;
+    } catch (error) {
+      throw new Error('Error al buscar la marca: ' + error.message);
+    }
   }
 
   // Crear nueva marca
   async create(data) {
-    const newBrand = {
-      id: this.brands.length + 1,
-      name: data.name || 'Sin nombre',
-      country: data.country || 'Desconocido',
-      description: data.description || 'Sin descripción',
-      active: data.active ?? true
-    };
-    this.brands.push(newBrand);
-    return newBrand;
+    try {
+      const newBrand = new Brand({
+        _id: Number(data._id),
+        name: data.name || 'Sin nombre',
+        country: data.country || 'Desconocido',
+        description: data.description || 'Sin descripción',
+        active: data.active ?? true
+      });
+      const savedBrand = await newBrand.save();
+      return savedBrand;
+    } catch (error) {
+      console.error('❌ Error al crear la marca:', error.message);
+      throw new Error('Error al crear la marca: ' + error.message);
+    }
   }
 
-  // Actualizar marca
+  // Actualizar marca existente
   async update(id, changes) {
-    const index = this.brands.findIndex(item => item.id === Number(id));
-    if (index === -1) throw new Error('Marca no encontrada');
-    const brand = this.brands[index];
-    this.brands[index] = { ...brand, ...changes };
-    return this.brands[index];
+    try {
+      const updatedBrand = await Brand.findOneAndUpdate(
+        { _id: Number(id) },
+        { $set: changes },
+        { new: true }
+      );
+      if (!updatedBrand) throw new Error(`No se encontró la marca con ID ${id}`);
+      return updatedBrand;
+    } catch (error) {
+      throw new Error('Error al actualizar la marca: ' + error.message);
+    }
   }
 
   // Eliminar marca
   async delete(id) {
-    const index = this.brands.findIndex(item => item.id === Number(id));
-    if (index === -1) return null;
-    this.brands.splice(index, 1);
-    return { id: Number(id) };
+    try {
+      const deletedBrand = await Brand.findOneAndDelete({ _id: Number(id) });
+      if (!deletedBrand) throw new Error(`No se encontró la marca con ID ${id}`);
+      return deletedBrand;
+    } catch (error) {
+      throw new Error('Error al eliminar la marca: ' + error.message);
+    }
   }
 }
 

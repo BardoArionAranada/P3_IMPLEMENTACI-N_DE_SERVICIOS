@@ -1,6 +1,6 @@
 // Archivo: routes/rutas.js
 // Descripción: Agrupador central de todas las rutas de la API
-// Adaptado para usar las mismas instancias de servicios y evitar duplicados de datos.
+// Adaptado para usar conexión con MongoDB Atlas y mantener la estructura modular de rutas.
 
 const express = require('express');
 
@@ -24,7 +24,7 @@ function routerApi(app) {
   router.use('/products', productsRouter);
 
   // Verificación en consola
-  console.log(' Rutas cargadas: /users, /categories, /brands, /products');
+  console.log('✅ Rutas cargadas correctamente: /users, /categories, /brands, /products');
 }
 
 module.exports = routerApi;

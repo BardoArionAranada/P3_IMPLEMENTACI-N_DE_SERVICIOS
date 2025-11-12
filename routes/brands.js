@@ -1,7 +1,7 @@
 // Archivo: routes/brands.js
 // Descripción:
 // Rutas CRUD del recurso "Brands" con documentación Swagger completa y validación de relaciones.
-// Actualizado para usar datos compartidos desde sharedData.js a través de los servicios.
+// Actualizado para usar base de datos MongoDB Atlas mediante servicios (brandsService.js y productsService.js)
 
 const express = require('express');
 const BrandsService = require('../services/brandsService');
@@ -26,8 +26,12 @@ const productsService = new ProductsService();
  *      description: Lista de marcas
  */
 router.get('/', async (req, res) => {
-  const brands = await service.getAll();
-  res.json(brands);
+  try {
+    const brands = await service.getAll();
+    res.json(brands);
+  } catch (error) {
+    res.status(500).json({ message: 'Error al obtener las marcas', error });
+  }
 });
 
 // GET → obtener marca por ID
@@ -43,15 +47,22 @@ router.get('/', async (req, res) => {
  *         required: true
  *         description: ID de la marca
  *         schema:
- *           type: number
+ *           type: string
  *     responses:
  *       200:
  *         description: Marca encontrada
  */
 router.get('/:id', async (req, res) => {
-  const { id } = req.params;
-  const brand = await service.getById(id);
-  res.json(brand);
+  try {
+    const { id } = req.params;
+    const brand = await service.getById(id);
+    if (!brand) {
+      return res.status(404).json({ message: 'Marca no encontrada' });
+    }
+    res.json(brand);
+  } catch (error) {
+    res.status(500).json({ message: 'Error al obtener la marca', error });
+  }
 });
 
 // POST → crear nueva marca
@@ -81,9 +92,13 @@ router.get('/:id', async (req, res) => {
  *         description: Marca creada exitosamente
  */
 router.post('/', async (req, res) => {
-  const body = req.body;
-  const newBrand = await service.create(body);
-  res.status(201).json(newBrand);
+  try {
+    const body = req.body;
+    const newBrand = await service.create(body);
+    res.status(201).json(newBrand);
+  } catch (error) {
+    res.status(500).json({ message: 'Error al crear la marca', error });
+  }
 });
 
 // PUT → actualizar marca existente
@@ -99,7 +114,7 @@ router.post('/', async (req, res) => {
  *         required: true
  *         description: ID de la marca a actualizar
  *         schema:
- *           type: number
+ *           type: string
  *     requestBody:
  *       required: true
  *       content:
@@ -120,10 +135,17 @@ router.post('/', async (req, res) => {
  *         description: Marca actualizada exitosamente
  */
 router.put('/:id', async (req, res) => {
-  const { id } = req.params;
-  const body = req.body;
-  const updated = await service.update(id, body);
-  res.json(updated);
+  try {
+    const { id } = req.params;
+    const body = req.body;
+    const updated = await service.update(id, body);
+    if (!updated) {
+      return res.status(404).json({ message: 'Marca no encontrada' });
+    }
+    res.json(updated);
+  } catch (error) {
+    res.status(500).json({ message: 'Error al actualizar la marca', error });
+  }
 });
 
 // DELETE → eliminar marca (con validación de productos asociados)
@@ -139,31 +161,38 @@ router.put('/:id', async (req, res) => {
  *         required: true
  *         description: ID de la marca a eliminar
  *         schema:
- *           type: number
+ *           type: string
  *     responses:
  *       200:
  *         description: Marca eliminada exitosamente
  */
 router.delete('/:id', async (req, res) => {
-  const { id } = req.params;
+  try {
+    const { id } = req.params;
 
-  // Validación: no eliminar si hay productos asociados
-  const relatedProducts = (await productsService.getAll()).filter(
-    p => p.brandId === Number(id)
-  );
+    // Validación: no eliminar si hay productos asociados
+    const relatedProducts = await productsService.getAll();
+    const productsLinked = relatedProducts.filter(p => p.brandId?.toString() === id);
 
-  if (relatedProducts.length > 0) {
-    return res.status(400).json({
-      message: 'No se puede eliminar la marca: existen productos asociados',
-      totalRelacionados: relatedProducts.length
+    if (productsLinked.length > 0) {
+      return res.status(400).json({
+        message: 'No se puede eliminar la marca: existen productos asociados',
+        totalRelacionados: productsLinked.length
+      });
+    }
+
+    const deleted = await service.delete(id);
+    if (!deleted) {
+      return res.status(404).json({ message: 'Marca no encontrada' });
+    }
+
+    res.json({
+      message: `Marca eliminada correctamente (ID ${id})`,
+      deleted
     });
+  } catch (error) {
+    res.status(500).json({ message: 'Error al eliminar la marca', error });
   }
-
-  const deleted = await service.delete(id);
-  res.json({
-    message: `Marca eliminada correctamente (ID ${id})`,
-    deleted
-  });
 });
 
 module.exports = router;

@@ -10,11 +10,13 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "description": "",
   "dependencies": {
     "@faker-js/faker": "^10.0.0",
+    "body-parser": "^2.2.0",
+    "cors": "^2.8.5",
     "express": "^4.21.2",
     "faker": "^5.5.3",
+    "mongoose": "^8.19.3",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.1"
   },
@@ -22,7 +24,16 @@
     "eslint": "^9.35.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.4",
-    "nodemon": "^3.1.10",
+    "nodemon": "^3.1.11",
     "prettier": "^3.6.2"
-  }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/BardoArionAranada/P3_IMPLEMENTACI-N_DE_SERVICIOS.git"
+  },
+  "bugs": {
+    "url": "https://github.com/BardoArionAranada/P3_IMPLEMENTACI-N_DE_SERVICIOS/issues"
+  },
+  "homepage": "https://github.com/BardoArionAranada/P3_IMPLEMENTACI-N_DE_SERVICIOS#readme",
+  "description": ""
 }

@@ -1,7 +1,7 @@
 // Archivo: routes/categories.js
 // Descripción:
 // Rutas CRUD del recurso "Categories" con documentación Swagger completa y validación de relaciones.
-// Actualizado para usar datos compartidos desde sharedData.js y mantener coherencia entre entidades.
+// Actualizado para usar base de datos MongoDB Atlas mediante los servicios (categoriesService.js y productsService.js)
 
 const express = require('express');
 const CategoriesService = require('../services/categoriesService');
@@ -31,8 +31,8 @@ const productsService = new ProductsService();
  *         items:
  *          type: object
  *          properties:
- *           id:
- *            type: number
+ *           _id:
+ *            type: string
  *           name:
  *            type: string
  *           description:
@@ -62,15 +62,22 @@ router.get('/', async (req, res, next) => {
  *         required: true
  *         description: ID de la categoría
  *         schema:
- *           type: number
+ *           type: string
  *     responses:
  *       200:
  *         description: Categoría encontrada
  */
 router.get('/:id', async (req, res) => {
-  const { id } = req.params;
-  const category = await service.getById(id);
-  res.json(category);
+  try {
+    const { id } = req.params;
+    const category = await service.getById(id);
+    if (!category) {
+      return res.status(404).json({ message: 'Categoría no encontrada' });
+    }
+    res.json(category);
+  } catch (error) {
+    res.status(500).json({ message: 'Error al obtener la categoría', error });
+  }
 });
 
 // POST → crear nueva categoría
@@ -98,9 +105,13 @@ router.get('/:id', async (req, res) => {
  *         description: Categoría creada exitosamente
  */
 router.post('/', async (req, res) => {
-  const body = req.body;
-  const newCategory = await service.create(body);
-  res.status(201).json(newCategory);
+  try {
+    const body = req.body;
+    const newCategory = await service.create(body);
+    res.status(201).json(newCategory);
+  } catch (error) {
+    res.status(500).json({ message: 'Error al crear la categoría', error });
+  }
 });
 
 // PUT → actualizar categoría existente
@@ -116,7 +127,7 @@ router.post('/', async (req, res) => {
  *         required: true
  *         description: ID de la categoría a actualizar
  *         schema:
- *           type: number
+ *           type: string
  *     requestBody:
  *       required: true
  *       content:
@@ -135,10 +146,17 @@ router.post('/', async (req, res) => {
  *         description: Categoría actualizada exitosamente
  */
 router.put('/:id', async (req, res) => {
-  const { id } = req.params;
-  const body = req.body;
-  const updated = await service.update(id, body);
-  res.json(updated);
+  try {
+    const { id } = req.params;
+    const body = req.body;
+    const updated = await service.update(id, body);
+    if (!updated) {
+      return res.status(404).json({ message: 'Categoría no encontrada' });
+    }
+    res.json(updated);
+  } catch (error) {
+    res.status(500).json({ message: 'Error al actualizar la categoría', error });
+  }
 });
 
 // DELETE → eliminar categoría (con validación de productos asociados)
@@ -154,31 +172,38 @@ router.put('/:id', async (req, res) => {
  *         required: true
  *         description: ID de la categoría a eliminar
  *         schema:
- *           type: number
+ *           type: string
  *     responses:
  *       200:
  *         description: Categoría eliminada exitosamente
  */
 router.delete('/:id', async (req, res) => {
-  const { id } = req.params;
+  try {
+    const { id } = req.params;
 
-  // Validación: no eliminar si hay productos asociados
-  const relatedProducts = (await productsService.getAll()).filter(
-    p => p.categoryId === Number(id)
-  );
+    // Validación: no eliminar si hay productos asociados
+    const relatedProducts = await productsService.getAll();
+    const productsLinked = relatedProducts.filter(p => p.categoryId?.toString() === id);
 
-  if (relatedProducts.length > 0) {
-    return res.status(400).json({
-      message: 'No se puede eliminar la categoría: existen productos asociados',
-      totalRelacionados: relatedProducts.length
+    if (productsLinked.length > 0) {
+      return res.status(400).json({
+        message: 'No se puede eliminar la categoría: existen productos asociados',
+        totalRelacionados: productsLinked.length
+      });
+    }
+
+    const deleted = await service.delete(id);
+    if (!deleted) {
+      return res.status(404).json({ message: 'Categoría no encontrada' });
+    }
+
+    res.json({
+      message: `Categoría eliminada correctamente (ID ${id})`,
+      deleted
     });
+  } catch (error) {
+    res.status(500).json({ message: 'Error al eliminar la categoría', error });
   }
-
-  const deleted = await service.delete(id);
-  res.json({
-    message: `Categoría eliminada correctamente (ID ${id})`,
-    deleted
-  });
 });
 
 module.exports = router;

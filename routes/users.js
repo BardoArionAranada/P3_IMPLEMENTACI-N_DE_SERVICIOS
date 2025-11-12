@@ -1,7 +1,7 @@
 // Archivo: routes/users.js
 // Descripción:
 // Rutas CRUD del recurso "Users" con documentación Swagger completa.
-// Utiliza datos compartidos desde sharedData.js para mantener coherencia global.
+// Actualizado para usar base de datos MongoDB Atlas mediante el servicio usersService.js.
 
 const express = require('express');
 const UsersService = require('../services/usersService');
@@ -43,7 +43,7 @@ router.get('/', async (req, res, next) => {
  *         name: id
  *         required: true
  *         schema:
- *           type: integer
+ *           type: string
  *     responses:
  *       200:
  *         description: Usuario encontrado
@@ -51,7 +51,10 @@ router.get('/', async (req, res, next) => {
 router.get('/:id', async (req, res, next) => {
   try {
     const { id } = req.params;
-    const user = await service.getById(parseInt(id));
+    const user = await service.getById(id);
+    if (!user) {
+      return res.status(404).json({ message: 'Usuario no encontrado' });
+    }
     res.json(user);
   } catch (error) {
     next(error);
@@ -111,7 +114,7 @@ router.post('/', async (req, res, next) => {
  *         name: id
  *         required: true
  *         schema:
- *           type: integer
+ *           type: string
  *     requestBody:
  *       required: true
  *       content:
@@ -137,7 +140,10 @@ router.put('/:id', async (req, res, next) => {
   try {
     const { id } = req.params;
     const body = req.body;
-    const updatedUser = await service.update(parseInt(id), body);
+    const updatedUser = await service.update(id, body);
+    if (!updatedUser) {
+      return res.status(404).json({ message: 'Usuario no encontrado' });
+    }
     res.json({
       message: 'Usuario actualizado correctamente',
       updatedUser
@@ -159,7 +165,7 @@ router.put('/:id', async (req, res, next) => {
  *         name: id
  *         required: true
  *         schema:
- *           type: integer
+ *           type: string
  *     responses:
  *       200:
  *         description: Usuario eliminado exitosamente
@@ -167,7 +173,10 @@ router.put('/:id', async (req, res, next) => {
 router.delete('/:id', async (req, res, next) => {
   try {
     const { id } = req.params;
-    const deletedUser = await service.delete(parseInt(id));
+    const deletedUser = await service.delete(id);
+    if (!deletedUser) {
+      return res.status(404).json({ message: 'Usuario no encontrado' });
+    }
     res.json({
       message: 'Usuario eliminado correctamente',
       deletedUser

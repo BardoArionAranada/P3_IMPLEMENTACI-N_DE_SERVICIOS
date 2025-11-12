@@ -1,7 +1,7 @@
 // Archivo: routes/products.js
 // Descripción:
-// Rutas CRUD del recurso "Products" con validaciones de relaciones con Brands y Categories.
-// Actualizado para usar servicios con datos compartidos desde sharedData.js.
+// Rutas CRUD del recurso "Products" con validaciones condicionales de relaciones con Brands y Categories.
+// Actualizado para usar base de datos MongoDB Atlas mediante los servicios (productsService.js, brandsService.js y categoriesService.js)
 
 const express = require('express');
 const ProductsService = require('../services/productsService');
@@ -10,7 +10,7 @@ const CategoriesService = require('../services/categoriesService');
 
 const router = express.Router();
 
-// Instancias sincronizadas con sharedData.js
+// Instancias conectadas a los modelos MongoDB
 const service = new ProductsService();
 const brandsService = new BrandsService();
 const categoriesService = new CategoriesService();
@@ -35,8 +35,8 @@ const categoriesService = new CategoriesService();
  *         items:
  *          type: object
  *          properties:
- *           id:
- *            type: number
+ *           _id:
+ *            type: string
  *           name:
  *            type: string
  *           description:
@@ -48,9 +48,9 @@ const categoriesService = new CategoriesService();
  *           image:
  *            type: string
  *           categoryId:
- *            type: number
+ *            type: string
  *           brandId:
- *            type: number
+ *            type: string
  *           active:
  *            type: boolean
  */
@@ -75,15 +75,22 @@ router.get('/', async (req, res, next) => {
  *         name: id
  *         required: true
  *         schema:
- *           type: integer
+ *           type: string
  *     responses:
  *       200:
  *         description: Producto encontrado
  */
 router.get('/:id', async (req, res) => {
-  const { id } = req.params;
-  const product = await service.getById(id);
-  res.json(product);
+  try {
+    const { id } = req.params;
+    const product = await service.getById(id);
+    if (!product) {
+      return res.status(404).json({ message: 'Producto no encontrado' });
+    }
+    res.json(product);
+  } catch (error) {
+    res.status(500).json({ message: 'Error al obtener el producto', error: error.message });
+  }
 });
 
 // POST → crear producto (valida existencia de categoría y marca)
@@ -111,9 +118,9 @@ router.get('/:id', async (req, res) => {
  *               image:
  *                 type: string
  *               categoryId:
- *                 type: number
+ *                 type: string
  *               brandId:
- *                 type: number
+ *                 type: string
  *               active:
  *                 type: boolean
  *     responses:
@@ -123,37 +130,37 @@ router.get('/:id', async (req, res) => {
  *         description: Error de validación
  */
 router.post('/', async (req, res) => {
-  const body = req.body;
+  try {
+    const body = req.body;
 
-  // Obtener datos actualizados de categorías y marcas
-  const categories = await categoriesService.getAll();
-  const brands = await brandsService.getAll();
+    // Verificar existencia de categoría y marca
+    const category = await categoriesService.getById(body.categoryId);
+    const brand = await brandsService.getById(body.brandId);
 
-  // Validar existencia de las relaciones
-  const categoryExists = categories.some(c => c.id === Number(body.categoryId));
-  const brandExists = brands.some(b => b.id === Number(body.brandId));
+    if (!category) {
+      return res.status(400).json({
+        message: `No se puede crear el producto: la categoría con ID ${body.categoryId} no existe.`,
+      });
+    }
 
-  if (!categoryExists) {
-    return res.status(400).json({
-      message: `No se puede crear el producto: la categoría con ID ${body.categoryId} no existe.`,
+    if (!brand) {
+      return res.status(400).json({
+        message: `No se puede crear el producto: la marca con ID ${body.brandId} no existe.`,
+      });
+    }
+
+    // Crear producto
+    const newProduct = await service.create(body);
+    res.status(201).json({
+      message: 'Producto creado exitosamente',
+      newProduct,
     });
+  } catch (error) {
+    res.status(500).json({ message: 'Error al crear el producto', error: error.message });
   }
-
-  if (!brandExists) {
-    return res.status(400).json({
-      message: `No se puede crear el producto: la marca con ID ${body.brandId} no existe.`,
-    });
-  }
-
-  // Crear producto
-  const newProduct = await service.create(body);
-  res.status(201).json({
-    message: 'Producto creado exitosamente',
-    newProduct,
-  });
 });
 
-// PUT → actualizar producto existente (valida relaciones)
+// PUT → actualizar producto existente (validaciones condicionales)
 /**
  * @swagger
  * /products/{id}:
@@ -165,7 +172,7 @@ router.post('/', async (req, res) => {
  *         name: id
  *         required: true
  *         schema:
- *           type: integer
+ *           type: string
  *     requestBody:
  *       required: true
  *       content:
@@ -184,9 +191,9 @@ router.post('/', async (req, res) => {
  *               image:
  *                 type: string
  *               categoryId:
- *                 type: number
+ *                 type: string
  *               brandId:
- *                 type: number
+ *                 type: string
  *               active:
  *                 type: boolean
  *     responses:
@@ -196,32 +203,45 @@ router.post('/', async (req, res) => {
  *         description: Error de validación
  */
 router.put('/:id', async (req, res) => {
-  const { id } = req.params;
-  const body = req.body;
+  try {
+    const { id } = req.params;
+    const body = req.body;
 
-  const categories = await categoriesService.getAll();
-  const brands = await brandsService.getAll();
+    // Verificar si el producto existe
+    const existing = await service.getById(id);
+    if (!existing) {
+      return res.status(404).json({ message: 'Producto no encontrado' });
+    }
 
-  const categoryExists = categories.some(c => c.id === Number(body.categoryId));
-  const brandExists = brands.some(b => b.id === Number(body.brandId));
+    // Validar relaciones solo si se envían
+    if (body.categoryId) {
+      const category = await categoriesService.getById(body.categoryId);
+      if (!category) {
+        return res.status(400).json({
+          message: `No se puede actualizar el producto: la categoría con ID ${body.categoryId} no existe.`,
+        });
+      }
+    }
 
-  if (!categoryExists) {
-    return res.status(400).json({
-      message: `No se puede actualizar el producto: la categoría con ID ${body.categoryId} no existe.`,
+    if (body.brandId) {
+      const brand = await brandsService.getById(body.brandId);
+      if (!brand) {
+        return res.status(400).json({
+          message: `No se puede actualizar el producto: la marca con ID ${body.brandId} no existe.`,
+        });
+      }
+    }
+
+    // Actualizar producto
+    const updated = await service.update(id, body);
+    res.json({
+      message: 'Producto actualizado exitosamente',
+      updated,
     });
+  } catch (error) {
+    console.error('❌ Error al actualizar producto:', error);
+    res.status(500).json({ message: 'Error al actualizar el producto', error: error.message });
   }
-
-  if (!brandExists) {
-    return res.status(400).json({
-      message: `No se puede actualizar el producto: la marca con ID ${body.brandId} no existe.`,
-    });
-  }
-
-  const updated = await service.update(id, body);
-  res.json({
-    message: 'Producto actualizado correctamente',
-    updated,
-  });
 });
 
 // DELETE → eliminar producto
@@ -236,18 +256,25 @@ router.put('/:id', async (req, res) => {
  *         name: id
  *         required: true
  *         schema:
- *           type: integer
+ *           type: string
  *     responses:
  *       200:
  *         description: Producto eliminado exitosamente
  */
 router.delete('/:id', async (req, res) => {
-  const { id } = req.params;
-  const deleted = await service.delete(id);
-  res.json({
-    message: `Producto eliminado correctamente (ID ${id})`,
-    deleted,
-  });
+  try {
+    const { id } = req.params;
+    const deleted = await service.delete(id);
+    if (!deleted) {
+      return res.status(404).json({ message: 'Producto no encontrado' });
+    }
+    res.json({
+      message: `Producto eliminado correctamente (ID ${id})`,
+      deleted,
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Error al eliminar el producto', error: error.message });
+  }
 });
 
 module.exports = router;

@@ -1,3 +1,8 @@
+// Archivo: swagger.js
+// Descripción:
+// Configuración de la documentación Swagger de la API (Users, Categories, Brands y Products).
+// Compatible con MongoDB Atlas y estructura modular de rutas.
+
 // importaciones
 const swaggerJSDoc = require('swagger-jsdoc');
 const swaggerUi = require('swagger-ui-express');
@@ -7,18 +12,19 @@ const options = {
   definition: {
     openapi: '3.0.0',
     info: {
-      title: 'Documentación de la API – P1_Swagger',
-      version: '1.0.0',
-      description: 'Documentación de la API de la práctica P1 (Users, Categories, Brands y Products) usando Swagger',
+      title: 'Documentación de la API – P3_Implementación_de_Servicios',
+      version: '1.0.1',
+      description:
+        'API REST desarrollada con Node.js, Express y MongoDB Atlas. Incluye módulos de Users, Categories, Brands y Products con relaciones y validaciones.',
     },
     servers: [
       {
         url: 'http://localhost:3000/',
-        description: 'Servidor de desarrollo',
+        description: 'Servidor local de desarrollo',
       },
     ],
   },
-  apis: ['./routes/*.js'], // ruta donde están las rutas
+  apis: ['./routes/*.js'], // rutas donde están definidas las anotaciones Swagger
 };
 
 // genera la especificación de Swagger
